@@ -1,53 +1,27 @@
 import requests
 import argparse
-import re
 import time
 from bs4 import BeautifulSoup
-import subprocess
 import json
-import psutil
 import getpass
-import socket
 from des import str_enc
 
-# 正则表达式匹配IPv4地址
 
-
-def is_ipv4(ip):
-    pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-    if re.match(pattern, ip):
-        return True
-    else:
-        print("IP address format error!")
-        return False
-
-
-# 获取本地校园IP地址，校园IP地址一般以"172"开头
-
-
-def get_local_ip():
+# 获取drcom信息（包括IP和登录状态）
+def get_drcom_info():
     try:
-        # 获取所有网络接口信息
-        interfaces = psutil.net_if_addrs()
-        ip_list = []
-        for interface_name, interface_addresses in interfaces.items():
-            for address in interface_addresses:
-                # 检查是否是IPv4地址且是校园网IP
-                if address.family == socket.AF_INET and address.address.startswith(
-                    "172."
-                ):
-                    ip_list.append(address.address)
-                    print(
-                        f"Network interface detected, Interface: {interface_name}, Address: {address}"
-                    )
-        if len(ip_list) == 0:
-            raise Exception(
-                "Campus network IP not detected. Please ensure you are correctly connected to the campus network via WIFI or Ethernet!"
-            )
-        else:
-            return ip_list
-    except:
-        raise Exception("Failed to get local IP address!")
+        url = "http://172.20.30.1/drcom/chkstatus?callback="
+        response = requests.get(url, timeout=5)
+        content = response.text.strip()
+        # 去除外层的括号
+        if content.startswith("(") and content.endswith(")"):
+            content = content[1:-1]
+
+        data = json.loads(content)
+        return data
+    except Exception as e:
+        print(f"Error getting drcom info: {e}")
+        return None
 
 
 # 通过des.py的加密函数加密
@@ -125,8 +99,7 @@ def extract_value_by_id_or_name(soup, attribute_type, attribute_value):
 
 
 def do_login(username, password, ip):
-    if not is_ipv4(ip):
-        return False
+    
     # 初始URL，可能是你想访问的网站的URL，这个网站将你重定向到SSO登录页面
     initial_url = f"http://172.20.30.2:8080/Self/sso_login?login_method=1&wlan_user_ip={ip}&wlan_user_ipv6=&wlan_user_mac=000000000000&wlan_ac_ip=172.20.30.254&wlan_ac_name=&mac_type=1&authex_enable=&type=1"
 
@@ -250,10 +223,22 @@ def main():
     # 解析命令行参数
     args = parser.parse_args()
 
+    info = get_drcom_info()
+
+    if info and info.get("result") == 1:
+        print("Current status: Online. No need to login.")
+        return
+
     if args.ip:
         print(login(args.username, args.password, args.ip))
     else:
-        ip_list = get_local_ip()
+        ip = info.get("v46ip") if info else None
+        if ip:
+            print(f"Detected IP: {ip}")
+            ip_list = [ip]
+        else:
+            raise Exception("Failed to get local IP address!")
+
         result = []
         for ip in ip_list:
             result.append(login(args.username, args.password, ip))

@@ -5,7 +5,7 @@
 - 所需环境：python3，requirments.txt中的库 ~~(通过chatgpt已将`des.js`转为`des.py`，不再需要nodejs)~~
 - 此脚本只在软件学院网络进行过测试，对于其他校区是否可用未进行测试
 - 需要注意，在校园网提示密码需要更换时，可能脚本无法正确登录，如下图的场景![alt text](README.assets/image-6.png)
-- 最后测试的可使用日期：2024.5.4
+- 最后测试的可使用日期：2025.11.21
 
 ## 宇宙级免责声明
 - 本脚本只是为了便于非图形化终端的用户登录校园网，没有对校园网有任何攻击行为，也不会泄漏用户个人信息
@@ -17,14 +17,14 @@
 ## 使用方法
 - 通过`pip install -r requirements.txt`或手动安装所需库
 - 使用示例：`python dlut_autologin.py [-u username] [-p password] [-i IP]`
-- 参数为校园网账户和密码和当前设备的校园IP地址，因为校园网在未登录时已获取IP，设备可通过`ipconfig/ifconfig/ip addr show`等命令获取，此参数若未给出则通过脚本中的函数自动获取。如果没在命令中给出账户和密码，则会在运行时提示输入。
+- ~~参数为校园网账户和密码和当前设备的校园IP地址，因为校园网在未登录时已获取IP，设备可通过`ipconfig/ifconfig/ip addr show`等命令获取，此参数若未给出则通过脚本中的函数自动获取。~~已更新，通过"http://172.20.30.1/drcom/chkstatus?callback="获取.如果没在命令中给出账户和密码，则会在运行时提示输入。
 - ~~dist文件夹下的可执行文件是本人在m2的macmini生成的，也许可以直接使用，并未进行测试~~
 - ~~des.js里包含了加密算法，通过chatgpt已将`des.js`转为`des.py`~~
 
 ## 校园网行为分析
 
 - 初始访问校园网登录网址"http://172.20.30.2:8080/Self/sso_login?login_method=1&wlan_user_ip={ip}&wlan_user_ipv6=&wlan_user_mac=000000000000&wlan_ac_ip=172.20.30.254&wlan_ac_name=&mac_type=1&authex_enable=&type=1"
-- 其中的IP地址为当前设备的校园网IP地址，登录时需要将其替换为当前设备的IP地址，因为校园网在未登录时已获取IP，设备可通过`ipconfig/ifconfig/ip addr show`等命令获取
+- 其中的IP地址为当前设备的校园网IP地址，登录时需要将其替换为当前设备的IP地址，~~因为校园网在未登录时已获取IP，设备可通过`ipconfig/ifconfig/ip addr show`等命令获取~~，已更新，通过"http://172.20.30.1/drcom/chkstatus?callback="获取
 - 之后会重定向，进行SSO认证（单点登录（英语：Single sign-on，缩写为 SSO），又译为单一签入，一种对于许多相互关连，但是又是各自独立的软件系统，提供访问控制的属性。当拥有这项属性时，当用户登录时，就可以获取所有系统的访问权限，不用对每个单一系统都逐一登录。这项功能通常是以轻型目录访问协议（LDAP）来实现，在服务器上会将用户信息存储到LDAP数据库中。相同的，单一退出（single sign-off）就是指，只需要单一的退出动作，就可以结束对于多个系统的访问权限 [^1]）
 - 校园网通过CAS进行SSO认证，下图为CAS流程示意图[^2]
 ![alt text](README.assets/image.png)

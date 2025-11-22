@@ -24,31 +24,7 @@ def get_drcom_info():
         return None
 
 
-# 通过des.py的加密函数加密
-
-
-def strEnc(data, firstKey, secondKey, thirdKey):
-    return str_enc(data, firstKey, secondKey, thirdKey)
-
-
-# # 调用Node.js执行des.js里的加密函数
-# def strEnc(data, firstKey, secondKey, thirdKey):
-#     result = subprocess.run(
-#         ['node', 'des.js', data, firstKey, secondKey, thirdKey],
-#         capture_output=True, text=True
-#     )
-
-#     # 检查命令执行结果
-#     if result.returncode == 0:
-#         print("Encryption result: ", result.stdout.strip())
-#     else:
-#         raise Exception("An error occurred during execution: ", result.stderr)
-
-#     return result.stdout.strip()
-
-# 用于格式化输出online_list
-
-
+# 格式化并打印在线设备列表
 def format_online_list_print(data_list):
     print("online_list:")
     # 获取字段名列表，假设所有字典有相同的字段
@@ -67,6 +43,7 @@ def format_online_list_print(data_list):
     print("-" * len(header_row))  # 打印分隔线
 
 
+# 提取HTML元素的值
 def extract_value_by_id_or_name(soup, attribute_type, attribute_value):
     """
     Extracts the value of an HTML element identified by its ID or name attribute.
@@ -96,10 +73,8 @@ def extract_value_by_id_or_name(soup, attribute_type, attribute_value):
 
 
 # 实际登录函数
-
-
 def do_login(username, password, ip):
-    
+
     # 初始URL，可能是你想访问的网站的URL，这个网站将你重定向到SSO登录页面
     initial_url = f"http://172.20.30.2:8080/Self/sso_login?login_method=1&wlan_user_ip={ip}&wlan_user_ipv6=&wlan_user_mac=000000000000&wlan_ac_ip=172.20.30.254&wlan_ac_name=&mac_type=1&authex_enable=&type=1"
 
@@ -128,15 +103,13 @@ def do_login(username, password, ip):
 
     # 检查是否被重定向到SSO登录页
     if response.history:
-        # SSO登录表单的URL，这通常是在你被重定向到SSO登录页面时的URL
-        # sso_login_url = "https://sso.dlut.edu.cn/cas/login?service=https%3A%2F%2Fportal.dlut.edu.cn%2Ftp%2F"
+        # SSO登录表单的URL，被重定向到SSO登录页面时的URL
         sso_login_url = response.url
         print(f"跳转到sso登录页面: {sso_login_url}")
 
-        # 准备登录数据，这个需要根据SSO页面的具体要求来填写
-        # 在实际情况中，可能需要额外的字段，比如CSRF令牌等
+        # 准备登录数据
         login_data = {
-            "rsa": strEnc(username + password + lt_value, "1", "2", "3"),
+            "rsa": str_enc(username + password + lt_value, "1", "2", "3"),
             "ul": len(username),
             "pl": len(password),
             "sl": 0,
@@ -153,12 +126,15 @@ def do_login(username, password, ip):
         if login_response.history:
             print("Redirection...")
 
-            time.sleep(2)  # 等待2秒，防止后台新登录的数据还未刷新
-            # 访问设备在线列表，并打印
-            online_list_url = f"http://172.20.30.2:8080/Self/dashboard/getOnlineList"
-            online_list_response = session.get(online_list_url)
-            online_list = json.loads(online_list_response.text)
-            format_online_list_print(online_list)
+            time.sleep(3)  # 等待3秒，防止后台新登录的数据还未刷新
+            info = get_drcom_info()
+
+            if info and info.get("result") == 1:
+                print("Login successful!")
+                return True
+            else:
+                print("Login failed, unable to get drcom info after login.")
+                return False
         else:
             print(
                 "Login failed, no redirection found. Please check the entered account, password, and IP."
@@ -166,12 +142,9 @@ def do_login(username, password, ip):
             return False
     else:
         raise Exception("No redirection, direct access!")
-    return True
 
 
 # 处理每次登录
-
-
 def login(username, password, ip):
 
     if not username:
@@ -216,9 +189,9 @@ def main():
     parser = argparse.ArgumentParser(description="Processing required parameters")
 
     # 添加参数
-    parser.add_argument("-u", "--username", type=str, help="The username")
-    parser.add_argument("-p", "--password", type=str, help="The password")
-    parser.add_argument("-i", "--ip", type=str, help="The IP address")
+    parser.add_argument("-u", "--username", type=str, help="Username", required=False)
+    parser.add_argument("-p", "--password", type=str, help="Password", required=False)
+    parser.add_argument("-i", "--ip", type=str, help="IPV4 Address", required=False)
 
     # 解析命令行参数
     args = parser.parse_args()
@@ -226,7 +199,7 @@ def main():
     info = get_drcom_info()
 
     if info and info.get("result") == 1:
-        print("Current status: Online. No need to login.")
+        print("Current status: Online. Never need to login.")
         return
 
     if args.ip:
@@ -235,15 +208,9 @@ def main():
         ip = info.get("v46ip") if info else None
         if ip:
             print(f"Detected IP: {ip}")
-            ip_list = [ip]
+            print(login(args.username, args.password, ip))
         else:
             raise Exception("Failed to get local IP address!")
-
-        result = []
-        for ip in ip_list:
-            result.append(login(args.username, args.password, ip))
-        for r in result:
-            print(r)
 
 
 if __name__ == "__main__":
